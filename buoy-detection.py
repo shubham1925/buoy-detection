@@ -13,7 +13,7 @@ except:
     pass
 
 hist_size = [255]
-hist_range = [0,254]
+hist_range = [0,256]
 dataset = []
 path_g = r'C:\Users\shubh\Desktop\PMRO\SEM2\Perception\P3\Training Set\Green'
 vid = cv.VideoCapture("detectbuoy.avi")
@@ -47,26 +47,6 @@ mean_r = []
 std_dev_b = []
 std_dev_g = []
 std_dev_r = []
-
-# =============================================================================
-#trial_str = path_g + "\green10.jpg"
-#img = cv.imread(trial_str)
-#gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-#thresh = cv.threshold(gray, 240,255,cv.THRESH_BINARY_INV)[1]
-#kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (11,11))
-#morphed = cv.morphologyEx(thresh, cv.MORPH_CLOSE, kernel)
-#cnts = cv.findContours(thresh, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)[-2]
-#cv.drawContours(img, cnts, -1, [0,0,255], 2)
-#cnt = sorted(cnts, key=cv.contourArea)[-1]
-#x,y,w,h = cv.boundingRect(cnt)
-#dst = img[y:y+h, x:x+w]
-# 
-#cv.imshow("trial",img)
-#cv.waitKey(0)
-# =============================================================================
-
-
-
 
 for i in os.listdir(path_g):
     dataset.append(i)
@@ -205,6 +185,7 @@ def EM():
         for h in range(0, height):
             for w in range(0, width):
                 #collect all the datapoints (x) in algorithm
+#                datapoint.append(img[h][w])
                 datapoint.append(green_chan_img[h][w])
     
     #intital estimates
@@ -217,7 +198,7 @@ def EM():
     
     iterations = 0
     
-    while(iterations <= 3):        
+    while(iterations <= 50):        
 #        print("iteration: "+str(iterations))
         responsibility_1 = []
         responsibility_2 = []
@@ -239,6 +220,7 @@ def EM():
             probability_2 = GaussianEquation(std_dev_g_init, i, mean_g_init)
             probability_3 = GaussianEquation(std_dev_r_init, i, mean_r_init)
             
+            #gaussian of 3 channels
             probability_dist_1.append(probability_1)
             probability_dist_2.append(probability_2)
             probability_dist_3.append(probability_3)
@@ -257,14 +239,16 @@ def EM():
         mean_g_init = np.sum(np.array(pi_k_2)*np.array(datapoint))/np.sum(np.array(pi_k_2))
         mean_r_init = np.sum(np.array(pi_k_3)*np.array(datapoint))/np.sum(np.array(pi_k_3))
         
+        #calculating SD from mean and data points
         std_dev_b_init = (np.sum(np.array(pi_k_1) * ((np.array(datapoint)) 
         - mean_b_init) ** (2)) / np.sum(np.array(pi_k_1))) ** (1 / 2)
         std_dev_g_init = (np.sum(np.array(pi_k_2) * ((np.array(datapoint)) 
         - mean_g_init) ** (2)) / np.sum(np.array(pi_k_2))) ** (1 / 2)
         std_dev_r_init = (np.sum(np.array(pi_k_1) * ((np.array(datapoint)) 
-        - mean_r_init) ** (2)) / np.sum(np.array(pi_k_3))) ** (1 / 2)
+        - mean_r_init) ** (2)) / np.sum(np.array(pi_k_3))) ** (1 / 2)      
         
-        print("bgr :"+str(mean_b_init) + " " + str(mean_g_init) + " " + str(mean_r_init))
+        
+#        print("bgr :"+str(mean_b_init) + " " + str(mean_g_init) + " " + str(mean_r_init))
         
         iterations = iterations + 1
         print(iterations)
@@ -281,118 +265,58 @@ if __name__ == "__main__":
     avg_std_dev_g = sum(std_dev_g)/len(std_dev_g)
     avg_std_dev_r = sum(std_dev_r)/len(std_dev_r)
     
-    gaussian_b = GaussianEquation(avg_std_dev_b, list(range(0,255)), avg_mean_b)
-    gaussian_g = GaussianEquation(avg_std_dev_g, list(range(0,255)), avg_mean_g)
-    gaussian_r = GaussianEquation(avg_std_dev_r, list(range(0,255)), avg_mean_r)
+    gaussian_b = GaussianEquation(avg_std_dev_b, list(range(0,256)), avg_mean_b)
+    gaussian_g = GaussianEquation(avg_std_dev_g, list(range(0,256)), avg_mean_g)
+    gaussian_r = GaussianEquation(avg_std_dev_r, list(range(0,256)), avg_mean_r)
     
-    plt.plot(gaussian_b, "b", gaussian_g, "g", gaussian_r, "r")
+#    plt.plot(gaussian_b, "b", gaussian_g, "g", gaussian_r, "r")
     
     mean_b_init, mean_g_init, mean_r_init, std_dev_b_init, std_dev_g_init, std_dev_r_init = EM()
     
     
+    greenboi_r = GaussianEquation(std_dev_r_init, list(range(0,256)), mean_r_init)
+    greenboi_g = GaussianEquation(std_dev_g_init, list(range(0,256)), mean_g_init)
+    greenboi_b = GaussianEquation(std_dev_b_init, list(range(0,256)), mean_b_init)
     
-#p 
-#
-#path_y = r'C:\Users\shubh\Desktop\PMRO\SEM2\Perception\P3\Training Set\Yellow\yellow.jpg'
-#path_o = r'C:\Users\shubh\Desktop\PMRO\SEM2\Perception\P3\Training Set\Orange\orange.jpg'
-#image_o = cv.imread(path_o)
-#path_g = r'C:\Users\shubh\Desktop\PMRO\SEM2\Perception\P3\Training Set\Green\green.jpg' 
-#image_y = cv.imread(path_y)
-#image_g = cv.imread(path_g)
-#image_main = cv.imread("frame2.jpg")
-##cv.imshow("image", image)
-#color = ("b","g","r")
-#
-##for j,c in enumerate(color):
-##    if c == "r":
-##        histogram_red = cv.calcHist([image_y], [j], None, hist_size, hist_range)
-##    if c == "g":
-##        histogram_green = cv.calcHist([image_y], [j], None, hist_size, hist_range)
-##    if c == "b":
-##        histogram_blue = cv.calcHist([image_y], [j], None, hist_size, hist_range)
-##        
-##for j,c in enumerate(color):
-##    if c == "r":
-##        histogram_red = cv.calcHist([image_o], [j], None, hist_size, hist_range)
-##    if c == "g":
-##        histogram_green = cv.calcHist([image_o], [j], None, hist_size, hist_range)
-##    if c == "b":
-##        histogram_blue = cv.calcHist([image_o], [j], None, hist_size, hist_range)
-#        
-#for j,c in enumerate(color):
-#    if c == "r":
-#        histogram_red = cv.calcHist([image_g], [j], None, hist_size, hist_range, accumulate = 1)
-#        
-#    if c == "g":
-#        histogram_green = cv.calcHist([image_g], [j], None, hist_size, hist_range)
-#    if c == "b":
-#        histogram_blue = cv.calcHist([image_g], [j], None, hist_size, hist_range)
-#
-#final_histo = np.column_stack((histogram_red, histogram_green))
-#final_histo_avg = np.sum(final_histo, axis = 1)/(final_histo.shape[1] - 1)
-#
-#mean_y, std_dev_y = cv.meanStdDev(image_main)
-#
-#x = list(range(0,255))
-#
-#g_eqn_y_g = GaussianEquation(std_dev_y[1], x, mean_y[1])
-#
-#print(np.sum(g_eqn_y_g))
-#
-#plt.subplot(2,1,1)
-#plt.plot(g_eqn_y_g, color = "g")
-#plt.subplot(2,1,2)
-#plt.plot(histogram_green, color = "g")
-#
-#while True:
-#    ret, frame = vid.read()
-#    green_frame = frame[:,:,1]
-#    width, height = green_frame.shape
-#    img_thresholded = np.zeros(green_frame.shape, dtype = np.uint8)
-#    
-#    for w in range(0,width):
-#        for h in range(0,height):
-#            pixel_value =green_frame[w][h]
-##            print("pixel val: "+str(pixel_value))
-#            if g_eqn_y_g[pixel_value-1] > 0.005 and g_eqn_y_g[pixel_value-1] < 0.015:
-#                img_thresholded[w][h] = 255
-#            else:
-#                img_thresholded[w][h] = 0
-#    cv.imshow("thresh", img_thresholded)
-#                
-#                
-#                
-#
-#
-#
-#
-##        
-##plt.subplot(3,1,1)        
-##plt.plot(histogram_red, color = "r")
-##plt.subplot(3,1,2)
-##plt.plot(histogram_green, color = "g")
-##plt.subplot(3,1,3)
-##plt.plot(histogram_blue, color = "b")
-#
-#
-#
-#
-##average histogram code --->assuming we have images
-#for i in images:
-#    img = cv.imread("path"+"image")
-#    b,g,r = cv.split(img)
-#    color = ("b","g","r")
-#
-#    for j,c in enumerate(color):
-#        if c == "r":
-#            histogram_red = cv.calcHist([img], [j], None, hist_size, hist_range)
-#        if c == "g":
-#            histogram_green = cv.calcHist([img], [j], None, hist_size, hist_range)
-#        if c == "b":
-#            histogram_blue = cv.calcHist([img], [j], None, hist_size, hist_range)
-#        
+    plt.plot(greenboi_r, "r", greenboi_g, "g", greenboi_b, "b")
     
-#
+    while True:
+        ret, frame = vid.read()
+        frame_g=frame[:,:,1]
+        frame_r=frame[:,:,2]
+        if ret == True:
+            frame_updated=np.zeros(frame.shape, dtype = np.uint8)
+        
+            for i in range(0,frame_g.shape[0]):
+                for j in range(0,frame_g.shape[1]):
+                    pixel_val = frame_g[i][j]
+                    if greenboi_r[pixel_val]<0.02 and greenboi_g[pixel_val]>0.06 and greenboi_b[pixel_val]<0.02:
+                        frame_updated[i][j]=255
+#                        print(frame_updated.shape)
+                    else:
+                        frame_updated[i][j]=0  
+#                        print(frame_updated.shape)
+            kernel_square = np.ones((10,10),np.uint8)
+            kernel_ellipse = cv.getStructuringElement(cv.MORPH_ELLIPSE,(5,5))
+            np.array([[0, 0, 1, 0, 0],
+                   [1, 1, 1, 1, 1],
+                   [1, 1, 1, 1, 1],
+                   [1, 1, 1, 1, 1],
+                   [0, 0, 1, 0, 0]], dtype=np.uint8)
+            ret_thresh, thresholded = cv.threshold(frame_updated, 240, 255, cv.THRESH_BINARY)
+            dilated = cv.dilate(thresholded, kernel_ellipse, iterations = 1)
+#            dilated_updated = cv.cvtColor(dilated, cv.COLOR_BGR2GRAY)
+#            contours, _ = cv.findContours(dilated, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
+#            cont_img = cv.drawContours(dilated, contours, -1, (0,255,0), 5)
+            cv.imshow("threshold", dilated)
+            k = cv.waitKey(15) & 0xff
+            if k == 27:
+                break
 
-#    
-#
+        else:
+            break
+        
+        
+    vid.release()
+    cv.destroyAllWindows()
+        
