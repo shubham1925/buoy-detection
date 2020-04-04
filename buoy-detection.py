@@ -285,12 +285,13 @@ if __name__ == "__main__":
         frame_g=frame[:,:,1]
         frame_r=frame[:,:,2]
         if ret == True:
-            frame_updated=np.zeros(frame.shape, dtype = np.uint8)
-        
+            frame_updated=np.zeros(frame_g.shape, dtype = np.uint8)
+#            print("here " + str(frame_updated.shape))
             for i in range(0,frame_g.shape[0]):
                 for j in range(0,frame_g.shape[1]):
                     pixel_val = frame_g[i][j]
-                    if greenboi_r[pixel_val]<0.02 and greenboi_g[pixel_val]>0.06 and greenboi_b[pixel_val]<0.02:
+                    if greenboi_r[pixel_val]<0.02 and greenboi_g[pixel_val]>0.06 and greenboi_b[pixel_val]<0.02 and frame_r[i][j]<200:
+                        #frame_r<200 is trial
                         frame_updated[i][j]=255
 #                        print(frame_updated.shape)
                     else:
@@ -306,9 +307,22 @@ if __name__ == "__main__":
             ret_thresh, thresholded = cv.threshold(frame_updated, 240, 255, cv.THRESH_BINARY)
             dilated = cv.dilate(thresholded, kernel_ellipse, iterations = 1)
 #            dilated_updated = cv.cvtColor(dilated, cv.COLOR_BGR2GRAY)
-#            contours, _ = cv.findContours(dilated, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
-#            cont_img = cv.drawContours(dilated, contours, -1, (0,255,0), 5)
-            cv.imshow("threshold", dilated)
+            contours, _ = cv.findContours(dilated, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
+            cont_img = cv.drawContours(frame, contours, -1, (0,0,255), 5)
+            
+            for c in contours:
+#                print("area: "+str(cv.contourArea(c)))
+                if cv.contourArea(c) > 40:
+                    print("inside1")
+                    (x,y),r = cv.minEnclosingCircle(c)
+                    center = (int(x),int(y))
+                    r = int(r)
+                    print(r)
+                    if r > 10 and r < 15.5 and y < 440:
+                        print("inside")
+                        cv.circle(frame,center,r,(0,255,0),2)
+#            cv.line(frame, (0,440), (600, 440), (255,0,0), 2)
+            cv.imshow("threshold", frame)
             k = cv.waitKey(15) & 0xff
             if k == 27:
                 break
