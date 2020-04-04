@@ -197,7 +197,7 @@ def EM():
         img = cv.imread(string_path)
 #        print(string_path)
         #select green channel
-        green_chan_img = img[:,:,2]
+        green_chan_img = img[:,:,1]
         height, width = green_chan_img.shape
         
         #for h in range(0, height):
