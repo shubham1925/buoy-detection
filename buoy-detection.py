@@ -200,12 +200,6 @@ def EM():
         green_chan_img = img[:,:,1]
         height, width = green_chan_img.shape
         
-        #for h in range(0, height):
-        #    for w in range(0, width):
-        #        collect all the datapoints (x) in algorithm
-        #         datapoint.append(img[h][w])
-        #        datapoint.append(green_chan_img[h][w])
-        #        print(datapoint)
         coordinates = np.indices((green_chan_img.shape[0], green_chan_img.shape[0]))
         coordinates = coordinates.reshape(2, -1)
         x,y=coordinates[0],coordinates[1]
@@ -213,7 +207,7 @@ def EM():
         xnew,ynew=x[indices[0]],y[indices[0]]
         #mask[xnew,ynew]=green_chan_img[xnew,ynew]
         #cv.imshow("new",mask)
-        datapoint=img[xnew,ynew]
+        datapoint=green_chan_img[xnew,ynew]
         #print(datapoint[:,1])
         
         
@@ -243,7 +237,7 @@ def EM():
         pi_k_3 = []            
         
         #perform e and m for each datapoint
-        for i in datapoint[:,1]:
+        for i in datapoint:
 #            print("in for")
             #calculate probabilty at that pixel
             probability_1 = GaussianEquation(std_dev_b_init, i, mean_b_init)
@@ -265,16 +259,16 @@ def EM():
 #            print(i)
             
         #formula for calculating new mean from pdf    
-        mean_b_init = np.sum(np.array(pi_k_1)*np.array(datapoint[:,1]))/np.sum(np.array(pi_k_1))
-        mean_g_init = np.sum(np.array(pi_k_2)*np.array(datapoint[:,1]))/np.sum(np.array(pi_k_2))
-        mean_r_init = np.sum(np.array(pi_k_3)*np.array(datapoint[:,1]))/np.sum(np.array(pi_k_3))
+        mean_b_init = np.sum(np.array(pi_k_1)*np.array(datapoint))/np.sum(np.array(pi_k_1))
+        mean_g_init = np.sum(np.array(pi_k_2)*np.array(datapoint))/np.sum(np.array(pi_k_2))
+        mean_r_init = np.sum(np.array(pi_k_3)*np.array(datapoint))/np.sum(np.array(pi_k_3))
         
         #calculating SD from mean and data points
-        std_dev_b_init = (np.sum(np.array(pi_k_1) * ((np.array(datapoint[:,1])) 
+        std_dev_b_init = (np.sum(np.array(pi_k_1) * ((np.array(datapoint)) 
         - mean_b_init) ** (2)) / np.sum(np.array(pi_k_1))) ** (1 / 2)
-        std_dev_g_init = (np.sum(np.array(pi_k_2) * ((np.array(datapoint[:,1])) 
+        std_dev_g_init = (np.sum(np.array(pi_k_2) * ((np.array(datapoint)) 
         - mean_g_init) ** (2)) / np.sum(np.array(pi_k_2))) ** (1 / 2)
-        std_dev_r_init = (np.sum(np.array(pi_k_1) * ((np.array(datapoint[:,1])) 
+        std_dev_r_init = (np.sum(np.array(pi_k_1) * ((np.array(datapoint)) 
         - mean_r_init) ** (2)) / np.sum(np.array(pi_k_3))) ** (1 / 2)      
         
         
@@ -282,6 +276,12 @@ def EM():
         
         iterations = iterations + 1
         print(iterations)
+        print("mb",mean_b_init)
+        print("mg",mean_g_init)
+        print("mr",mean_r_init)
+        print("sb",std_dev_b_init)
+        print("sg",std_dev_g_init)
+        print("sr",std_dev_r_init)
         
     return mean_b_init, mean_g_init, mean_r_init, std_dev_b_init, std_dev_g_init, std_dev_r_init  
 
