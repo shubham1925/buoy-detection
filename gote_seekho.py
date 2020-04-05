@@ -1,4 +1,7 @@
 # https://towardsdatascience.com/gaussian-mixture-models-explained-6986aaf5a95
+# https://towardsdatascience.com/gaussian-mixture-modelling-gmm-833c88587c7f
+# https://github.com/DFoly/Gaussian-Mixture-Modelling/blob/master/gaussian-mixture-model.ipynb
+# https://cmsc426.github.io/colorseg/#colorclassification
 
 from matplotlib import pyplot as plt
 import numpy as np
@@ -15,6 +18,7 @@ except:
 
 import cv2 as cv
 from scipy.stats import multivariate_normal as mvn
+from imutils import contours
 
 path_green = '/home/prasheel/Workspace/ENPM673/Project3/buoy-detection/Training Set/Green'
 path_orange = '/home/prasheel/Workspace/ENPM673/Project3/buoy-detection/Training Set/Orange'
@@ -190,25 +194,87 @@ def learn_with_em(xtrain, K, iters):
             pi_k[k] = 1. / n_points * N_ks[k]
         # print(log_likelihoods_array[-2])  
         if len(log_likelihoods_array) < 2 : continue
-        if np.abs(log_likelihood - log_likelihoods_array[-2]) < max_bound or len(log_likelihoods_array) > 10000: break
+        if np.abs(log_likelihood - log_likelihoods_array[-2]) < max_bound or len(log_likelihoods_array) > 1000: break
 
-    plt.plot(log_likelihoods_array)
-    plt.title('Log Likelihood vs iteration plot')
-    plt.xlabel('Iterations')
-    plt.ylabel('log likelihood')
-    plt.show()
+    # plt.plot(log_likelihoods_array)
+    # plt.title('Log Likelihood vs iteration plot')
+    # plt.xlabel('Iterations')
+    # plt.ylabel('log likelihood')
+    # plt.show()
     return mean, covar, pi_k
 
 # Yellow Only, change inside function.
 # look_at_histogram_son()
 
-mean_green_pts = mean_green()
-mean_orange_pts = mean_orange()
+def gote_dekho(trained_mean, trained_covar, train_pi_k, K):
+    vid = cv.VideoCapture("detectbuoy.avi")
+    print("Frame Reading started..")
+    while (vid.isOpened()):
+        ret,frame = vid.read()
+        if frame is not None:
+            # frame_g=frame[:,:,2]
+            frame_orig = frame
+            if ret == True:            
+                # K = 9
+                # frame = cv.GaussianBlur(frame, (3,3), 5)
+                height, width, channels = frame.shape[0], frame.shape[1], frame.shape[2]
+                frame = np.reshape(frame, (height * width, channels))
+                prob_of_single_gote = np.zeros((height * width, K))
+                gote_likelihood = np.zeros((height * width, K))
 
-# mean_green_pt = [np.mean(blue_channel_pts), np.mean(green_channel_pts), np.mean(red_channel_pts)]
-# x_train = np.array([blue_channel_pts, green_channel_pts, red_channel_pts]).T
-# trained_mean, trained_covar, train_pi_k = learn_with_em(np.array(mean_green_pts), 5, 500)
-# print(trained_mean[0][0], trained_covar,trained_covar[0][0, 1])
+                for k in range(0, K):
+                    prob_of_single_gote[:, k] = train_pi_k[k] * mvn.pdf(frame, trained_mean[k], trained_covar[k])
+                    gote_likelihood = prob_of_single_gote.sum(1)
+
+                gote_prob = np.reshape(gote_likelihood, (height, width))
+                # print("!")
+                # print(np.min(gote_prob))
+                # # For possible gote area, make image dark
+                # print(np.max(gote_prob))
+                gote_prob[np.where(gote_prob == np.max(gote_prob))] = 255
+                mask_image =np.zeros((height, width, channels), np.uint8)
+                mask_image[:,:,0] = gote_prob
+                mask_image[:,:,1] = gote_prob
+                mask_image[:,:,2] = gote_prob
+                # blur = cv.GaussianBlur(mask_image, (3, 3), 5)
+                # kernel_ellipse = cv.getStructuringElement(cv.MORPH_ELLIPSE,(5,5))
+                # np.array([[0, 0, 1, 0, 0],
+                #        [0, 1, 1, 1, 0],
+                #        [1, 1, 1, 1, 1],
+                #        [0, 1, 1, 1, 0],
+                #        [0, 0, 1, 0, 0]], dtype=np.uint8)
+                kernel_ellipse = cv.getStructuringElement(cv.MORPH_ELLIPSE,(5,5))
+                np.array([[0, 0, 1, 1, 1, 0, 0],
+                       [0, 1, 1, 1, 1, 1, 0],
+                       [1, 1, 1, 1, 1, 1, 1],
+                       [1, 1, 1, 1, 1, 1, 1],
+                       [1, 1, 1, 1, 1, 1, 1],
+                       [0, 1, 1, 1, 1, 1, 0],
+                       [0, 0, 1, 1, 1, 0, 0]], dtype=np.uint8)
+                
+                dilated = cv.dilate(mask_image, kernel_ellipse, iterations = 1)
+                edges = cv.Canny(dilated, 50, 255)
+                # cv.imshow("orig", frame_orig)
+                
+                contours_image, _ = cv.findContours(edges, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+                # cont_img = cv.drawContours(frame_orig, contours_image, -1, (0,0,255), 5)
+                cv.imshow("Mask", edges)
+
+                (contour_sorted, bounds) = contours.sort_contours(contours_image)
+                hull = cv.convexHull(contour_sorted[0])
+                (x, y), radius = cv.minEnclosingCircle(hull)
+                print(radius, x, y)
+                if radius > 2.6 and ((x > 120 and y > 320) or (x > 350 and y > 200)):
+                    cv.circle(frame_orig, (int(x), int(y) - 10), int(radius + 10), (0,165,255), 4)
+                cv.imshow("Final", frame_orig)
+                k = cv.waitKey(15) & 0xff
+                if k == 27:
+                    break
+
+        else:
+            break
+    vid.release()
+
 
 # greenboi_r = mvn.pdf(list(range(0,256)), trained_mean[0][0], trained_covar[0][0, 0])
 # greenboi_g = mvn.pdf(list(range(0,256)), trained_mean[0][1], trained_covar[0][1, 1])
@@ -220,23 +286,152 @@ mean_orange_pts = mean_orange()
 # plt.ylabel('Probabilites')
 # plt.show()
 
-trained_mean, trained_covar, train_pi_k = learn_with_em(np.array(mean_orange_pts), 9, 500)
-print(trained_mean[0][0], trained_covar,trained_covar[0][0, 1])
+# # Uncomment this
+# K = 5
+# mean_green_pts = mean_green()
+# trained_mean, trained_covar, train_pi_k = learn_with_em(np.array(mean_green_pts), 5, 500)
 
-orangeboi_r = mvn.pdf(list(range(0,256)), trained_mean[0][0], trained_covar[0][0, 0])
-orangeboi_g = mvn.pdf(list(range(0,256)), trained_mean[0][1], trained_covar[0][1, 1])
-orangeboi_b = mvn.pdf(list(range(0,256)), trained_mean[0][2], trained_covar[0][2, 2])
+K = 9
+# mean_orange_pts = mean_orange()
+# trained_mean, trained_covar, train_pi_k = learn_with_em(np.array(mean_orange_pts), K, 500)
+# np.save('mean.npy', trained_mean)
+# np.save('covar.npy', trained_covar)
+# np.save('weights.npy', train_pi_k)
 
-plt.plot(orangeboi_r, "r", orangeboi_g, "g", orangeboi_b, "b")
-plt.title('Gaussian Curve for only first mean value')
-plt.xlabel('x (0-256)')
-plt.ylabel('Probabilites')
-plt.show()
+trained_mean = np.load('mean.npy')
+trained_covar = np.load('covar.npy')
+train_pi_k = np.load('weights.npy')
 
-# x_train = np.array([blue_channel_pts, green_channel_pts, red_channel_pts]).T
 
-# print(x_train.shape)
+# orangeboi_r = mvn.pdf(list(range(0,256)), trained_mean[0][0], trained_covar[0][2, 2])
+# orangeboi_g = mvn.pdf(list(range(0,256)), trained_mean[0][1], trained_covar[0][1, 1])
+# orangeboi_b = mvn.pdf(list(range(0,256)), trained_mean[0][2], trained_covar[0][0, 0])
 
+# plt.plot(orangeboi_r, "r", orangeboi_g, "g", orangeboi_b, "b")
+# plt.title('Gaussian Curve for only first mean value')
+# plt.xlabel('x (0-256)')
+# plt.ylabel('Probabilites')
+# plt.show()
+print("EM finished..")
+
+gote_dekho(trained_mean, trained_covar, train_pi_k, K)
+            # for c in contours:
+#                print("area: "+str(cv.contourArea(c)))
+#                 if cv.contourArea(c) > 40:
+#                     print("inside1")
+#                     (x,y),r = cv.minEnclosingCircle(c)
+#                     center = (int(x),int(y))
+#                     r = int(r)
+#                     print(r)
+#                     if r > 10 and r < 15.5 and y < 440:
+#                         print("inside")
+#                         cv.circle(frame,center,r,(0,255,0),2)
+# #            cv.line(frame, (0,440), (600, 440), (255,0,0), 2)
+            # cv.imshow("threshold", frame)
+
+            # coordinates = np.indices((frame_dummy.shape[0], frame_dummy.shape[1]))
+            # coordinates = coordinates.reshape(2, -1)
+            # x,y=coordinates[0],coordinates[1]
+            # pixel_val=frame_dummy[x,y]
+            # print("!")
+            # print(coordinates.shape)
+            # print(pixel_val.shape)
+    
+#             indices1=np.where((orangeboi_r[pixel_val]<0.5) & (orangeboi_g[pixel_val]>0.021) & (orangeboi_b[pixel_val]<0.5) )
+#             indices2=np.where((orangeboi_r[pixel_val]>0.5) & (orangeboi_g[pixel_val]<0.021) & (orangeboi_b[pixel_val]>0.5) )
+#             x1,y1=x[indices1[0]],y[indices1[0]]
+#             x2,y2=x[indices2[0]],y[indices2[0]]
+#             frame_updated[x1,y1]=255
+#             frame_updated[x2,y2]=0
+
+#             # kernel_ellipse = cv.getStructuringElement(cv.MORPH_ELLIPSE,(5,5))
+#             # np.array([[0, 0, 1, 0, 0],
+#             #        [1, 1, 1, 1, 1],
+#             #        [1, 1, 1, 1, 1],
+#             #        [1, 1, 1, 1, 1],
+#             #        [0, 0, 1, 0, 0]], dtype=np.uint8)
+#             blur = cv.GaussianBlur(frame_updated,(15,15), 0) 
+#             ret_thresh, thresholded = cv.threshold(blur, 200, 255, cv.THRESH_BINARY)
+#             cv.imshow("r1",thresholded)
+#             edges = cv.Canny(thresholded, 50, 255)
+#             # dilated = cv.dilate(thresholded, kernel_ellipse, iterations = 1)
+# #           # dilated_updated = cv.cvtColor(dilated, cv.COLOR_BGR2GRAY)
+#             contours, _ = cv.findContours(edges, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
+#             # cont_img = cv.drawContours(frame, contours, -1, (0,0,255), 5)
+#             # cv.imshow("threshold", cont_img)
+#             # Draw circle to fit the contours enclosing specified area
+#             for c in contours:
+# #                print("area: "+str(cv.contourArea(c)))
+#                 if cv.contourArea(c) > 40:
+#                     print("inside1")
+#                     (x,y),r = cv.minEnclosingCircle(c)
+#                     center = (int(x),int(y))
+#                     r = int(r)
+#                     print(r)
+#                     if r > 8 and r < 35 and y<350 and y>150 :
+#                         print("inside")
+#                         cv.circle(frame,center,r,(0,255,0),2)
+# #            cv.line(frame, (0,440), (600, 440), (255,0,0), 2)
+#             cv.imshow("threshold", frame)
+# #            # cv.waitKey(0)
+
+# images = []
+# while (vid.isOpened()):
+#     success, frame = vid.read()
+#     if success == False:
+#         break    
+
+#     test_image = frame
+#     K = 6
+#     nx = test_image.shape[0]
+#     ny = test_image.shape[1]
+#     img = test_image
+#     ch = img.shape[2]
+#     img = np.reshape(img, (nx*ny,ch))
+    
+#     weights = train_pi_k # np.load('weights_o.npy')
+#     # parameters = parameters # np.load('parameters_o.npy')
+#     prob = np.zeros((nx*ny,K))
+#     likelihood = np.zeros((nx*ny,K))
+    
+#     for cluster in range(K):
+#        prob[:,cluster] = weights[cluster]*mvn.pdf(img, trained_mean[cluster], trained_covar[cluster])
+       
+#        likelihood = prob.sum(1)
+       
+    
+#     probabilities = np.reshape(likelihood,(nx,ny))
+    
+#     probabilities[probabilities>np.max(probabilities)/3.0] = 255
+    
+    
+    
+#     output = np.zeros_like(frame)
+#     output[:,:,0] = probabilities
+#     output[:,:,1] = probabilities
+#     output[:,:,2] = probabilities
+#     blur = cv.GaussianBlur(output,(3,3),5)
+    
+#     # edged = cv.Canny(blur,50,255 )
+    
+#     # cnts,h = cv.findContours(edged, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+#     # (cnts_sorted, boundingBoxes) = contours.sort_contours(cnts, method="left-to-right")
+#     cv.imshow("out", output)
+#     # hull = cv.convexHull(cnts_sorted[0])
+#     # (x,y),radius = cv.minEnclosingCircle(hull)
+    
+#     # if radius > 7:
+#     #     cv.circle(test_image,(int(x),int(y)-1),int(radius+1),(0,165,255),4)
+
+#     #     cv.imshow("Final output",test_image)
+#     #     images.append(test_image)
+#     # else:
+#     #     cv.imshow("Final output",test_image)
+#     #     images.append(test_image)
+    
+#     # cv2.waitKey(5)
+
+        
 
 # string_path = path_green  + "/green0" + ".jpg"
 # img = cv.imread(string_path)
@@ -271,6 +466,4 @@ plt.show()
 # # https://github.com/yashv28/Color-Segmentation-using-GMM/blob/master/em.py
 
 
-key = cv.waitKey(3000)#pauses for 3 seconds before fetching next image
-if key == 27:
-    cv.destroyAllWindows()
+cv.destroyAllWindows()
