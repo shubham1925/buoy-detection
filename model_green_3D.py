@@ -19,11 +19,21 @@ import cv2 as cv
 from scipy.stats import multivariate_normal as mvn
 from imutils import contours
 
+print("Enter a number based on the following options: ")
+print("1 -> Histogram check to get clusters")
+print("2 -> Train the model and check the log likelihood graph")
+print("3 -> Detect buoy directly with saved parameters")
+val = input("Your option: ") 
+
 path_green = '/home/prasheel/Workspace/ENPM673/Project3/buoy-detection/Training Set/Green'
 vid = cv.VideoCapture("detectbuoy.avi")
 frame_width = int(vid.get(3))
 frame_height = int(vid.get(4))
-out = cv.VideoWriter('model_green_3D_new.avi', cv.VideoWriter_fourcc('M','J','P','G'), 5, (frame_width, frame_height))
+if val == "3":
+    flag = input("Press 1 to save the output to video else 0: ")
+    if flag == "1":
+        out = cv.VideoWriter('model_green_3D_new.avi', cv.VideoWriter_fourcc('M','J','P','G'), 5, (frame_width, frame_height))
+
 def mean_green():    
     green_data = 29
     datapoints_green = []
@@ -193,7 +203,8 @@ def green_buoy_visual(trained_mean, trained_covar, train_pi_k, K):
                 if radius > 9 and ((x > 320 and y > 300) or (x > 350 and y > 200)):
                     cv.circle(frame_orig, (int(x), int(y)), int(radius + 2), (75,255,25), 4)
                 cv.imshow("Final", frame_orig)
-                out.write(frame_orig)
+                if flag == "1":
+                    out.write(frame_orig)
 
                 k = cv.waitKey(15) & 0xff
                 if k == 27:
@@ -201,33 +212,46 @@ def green_buoy_visual(trained_mean, trained_covar, train_pi_k, K):
 
         else:
             break
+
     vid.release()
-    out.release()
-# Uncomment to see the Average Histogram
-# look_at_histogram()
+    if flag == "1":
+        print("Output video saved!")
+        out.release()
+    else:
+        print("Completed.")
 
-# # Uncomment this
+# Cluster required for Green
 K = 5
-# mean_green_pts = mean_green()
-# trained_mean, trained_covar, train_pi_k = learn_with_em(np.array(mean_green_pts), K, 1500)
-# np.save('mean_green.npy', trained_mean)
-# np.save('covar_green.npy', trained_covar)
-# np.save('weights_green.npy', train_pi_k)
 
-trained_mean = np.load('mean_green.npy') 
-trained_covar = np.load('covar_green.npy')
-train_pi_k = np.load('weights_green.npy')
+if val == "1":
+    # Uncomment to see the Average Histogram
+    look_at_histogram()
+    print("Optimal K would be 5.")
 
-# greenboi_r = mvn.pdf(list(range(0,256)), trained_mean[0][0], trained_covar[0][2, 2])
-# greenboi_g = mvn.pdf(list(range(0,256)), trained_mean[0][1], trained_covar[0][1, 1])
-# greenboi_b = mvn.pdf(list(range(0,256)), trained_mean[0][2], trained_covar[0][0, 0])
+if val == "2":
+    # # Uncomment this
+    mean_green_pts = mean_green()
+    trained_mean, trained_covar, train_pi_k = learn_with_em(np.array(mean_green_pts), K, 1500)
+    np.save('mean_green.npy', trained_mean)
+    np.save('covar_green.npy', trained_covar)
+    np.save('weights_green.npy', train_pi_k)
+    print("EM trained, parameters saved into binary")
 
-# plt.plot(greenboi_r, "r", greenboi_g, "g", greenboi_b, "b")
-# plt.title('Gaussian Curve for only first mean value')
-# plt.xlabel('x (0-256)')
-# plt.ylabel('Probabilites')
-# plt.show()
-print("EM finished..")
+if val == "3":
+    trained_mean = np.load('mean_green.npy') 
+    trained_covar = np.load('covar_green.npy')
+    train_pi_k = np.load('weights_green.npy')
 
-green_buoy_visual(trained_mean, trained_covar, train_pi_k, K)
+    # greenboi_r = mvn.pdf(list(range(0,256)), trained_mean[0][0], trained_covar[0][2, 2])
+    # greenboi_g = mvn.pdf(list(range(0,256)), trained_mean[0][1], trained_covar[0][1, 1])
+    # greenboi_b = mvn.pdf(list(range(0,256)), trained_mean[0][2], trained_covar[0][0, 0])
+
+    # plt.plot(greenboi_r, "r", greenboi_g, "g", greenboi_b, "b")
+    # plt.title('Gaussian Curve for only first mean value')
+    # plt.xlabel('x (0-256)')
+    # plt.ylabel('Probabilites')
+    # plt.show()
+    print("EM finished with saved parameters..")
+    green_buoy_visual(trained_mean, trained_covar, train_pi_k, K)
+
 cv.destroyAllWindows()
