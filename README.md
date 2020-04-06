@@ -1,6 +1,4 @@
 ### buoy-detection
 
-## Possible Updates - 
-* Analyze Histogram again
-* Check Probabilities
-* EM function update
+Updated the trained model.
+Will update readme soon.
