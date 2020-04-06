@@ -23,7 +23,9 @@ path_orange = '/home/prasheel/Workspace/ENPM673/Project3/buoy-detection/Training
 vid = cv.VideoCapture("detectbuoy.avi")
 frame_width = int(vid.get(3))
 frame_height = int(vid.get(4))
-out = cv.VideoWriter('model_orange_3D.avi', cv.VideoWriter_fourcc('M','J','P','G'), 30, (frame_width, frame_height))
+
+out = cv.VideoWriter('model_orange_3D_new.avi', cv.VideoWriter_fourcc('M','J','P','G'), 5, (frame_width, frame_height))
+
 def mean_orange():    
     orange_data = 117
     datapoints_orange = []
@@ -74,17 +76,17 @@ def look_at_histogram():
                 std_dev_r.append(stds[2])
 
     #sum across the columns, divide by total number of observations
-    histogram_avg_b = np.sum(histogram_b, axis=1) / (yellow_data)
-    histogram_avg_g = np.sum(histogram_g, axis=1) / (yellow_data)
-    histogram_avg_r = np.sum(histogram_r, axis=1) / (yellow_data) 
+    histogram_avg_b = np.sum(histogram_b, axis=1) / (orange_data)
+    histogram_avg_g = np.sum(histogram_g, axis=1) / (orange_data)
+    histogram_avg_r = np.sum(histogram_r, axis=1) / (orange_data) 
 
     # Uncomment to plot histograms
     plt.subplot(3,1,1)
-    plt.plot(histogram_avg_b, color = "b")
+    plt.plot(histogram_b, color = "b")
     plt.subplot(3,1,2)
-    plt.plot(histogram_avg_g, color = "g")
+    plt.plot(histogram_g, color = "g")
     plt.subplot(3,1,3)
-    plt.plot(histogram_avg_r, color = "r")
+    plt.plot(histogram_r, color = "r")
     plt.show()
 
 def learn_with_em(xtrain, K, iters):
@@ -105,7 +107,7 @@ def learn_with_em(xtrain, K, iters):
     # print(covar)
     while len(log_likelihoods_array) < iters:
         # Expectation Step
-        print(len(log_likelihoods_array))
+        # print(len(log_likelihoods_array))
         for k in range(K):
             tmp = pi_k[k] * mvn.pdf(xtrain, mean[k], covar[k], allow_singular=True)
             prob_cluster__given_x[:,k]=tmp.reshape((n_points,))
@@ -121,7 +123,7 @@ def learn_with_em(xtrain, K, iters):
         
         # Maximization Step
         for k in range(K):
-            temp = math.fsum(prob_cluster__given_x[:,k])
+            # temp = math.fsum(prob_cluster__given_x[:,k])
             mean[k] = 1. / N_ks[k] * np.sum(prob_cluster__given_x[:, k] * xtrain.T, axis = 1).T
             diff_x_mean = xtrain - mean[k]
             covar[k] = np.array(1 / N_ks[k] * np.dot(np.multiply(diff_x_mean.T,  prob_cluster__given_x[:, k]), diff_x_mean))
@@ -154,7 +156,11 @@ def orange_buoy_visual(trained_mean, trained_covar, train_pi_k, K):
                     orange_likelihood = prob_of_orange_buoy.sum(1)
 
                 orange_prob = np.reshape(orange_likelihood, (height, width))
-                orange_prob[np.where(orange_prob == np.max(orange_prob))] = 255
+                # print(np.max(orange_prob))
+                # orange_prob[np.where(orange_prob == np.max(orange_prob))] = 255
+                orange_prob[orange_prob > np.max(orange_prob)/2.0] = 255
+                
+                
                 mask_image =np.zeros((height, width, channels), np.uint8)
                 mask_image[:,:,0] = orange_prob
                 mask_image[:,:,1] = orange_prob
@@ -186,9 +192,9 @@ def orange_buoy_visual(trained_mean, trained_covar, train_pi_k, K):
                 (contour_sorted, bounds) = contours.sort_contours(contours_image)
                 hull = cv.convexHull(contour_sorted[0])
                 (x, y), radius = cv.minEnclosingCircle(hull)
-                # print(radius, x, y)
-                if radius > 2.6 and ((x > 120 and y > 320) or (x > 350 and y > 200)):
-                    cv.circle(frame_orig, (int(x), int(y) - 10), int(radius + 10), (7,150,250), 4)
+                print(radius, x, y)
+                if radius > 9 and ((x > 120 and y > 320) or (x > 350 and y > 200)):
+                    cv.circle(frame_orig, (int(x), int(y) - 7), int(radius + 2), (7,150,250), 4)
                 cv.imshow("Final", frame_orig)
                 out.write(frame_orig)
                 k = cv.waitKey(15) & 0xff
@@ -202,21 +208,16 @@ def orange_buoy_visual(trained_mean, trained_covar, train_pi_k, K):
 # Uncomment to see the Average Histogram
 # look_at_histogram()
 
-# # Uncomment this
-# K = 5
-# mean_green_pts = mean_green()
-# trained_mean, trained_covar, train_pi_k = learn_with_em(np.array(mean_green_pts), 5, 500)
-
-K = 9
+K = 4
 # mean_orange_pts = mean_orange()
-# trained_mean, trained_covar, train_pi_k = learn_with_em(np.array(mean_orange_pts), K, 500)
-# np.save('mean.npy', trained_mean)
-# np.save('covar.npy', trained_covar)
-# np.save('weights.npy', train_pi_k)
+# trained_mean, trained_covar, train_pi_k = learn_with_em(np.array(mean_orange_pts), K, 1500)
+# np.save('mean_orange.npy', trained_mean)
+# np.save('covar_orange.npy', trained_covar)
+# np.save('weights_orange.npy', train_pi_k)
 
-trained_mean = np.load('mean.npy') 
-trained_covar = np.load('covar.npy')
-train_pi_k = np.load('weights.npy')
+trained_mean = np.load('mean_orange.npy') 
+trained_covar = np.load('covar_orange.npy')
+train_pi_k = np.load('weights_orange.npy')
 
 
 # orangeboi_r = mvn.pdf(list(range(0,256)), trained_mean[0][0], trained_covar[0][2, 2])

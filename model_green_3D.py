@@ -23,7 +23,7 @@ path_green = '/home/prasheel/Workspace/ENPM673/Project3/buoy-detection/Training 
 vid = cv.VideoCapture("detectbuoy.avi")
 frame_width = int(vid.get(3))
 frame_height = int(vid.get(4))
-out = cv.VideoWriter('model_green_3D.avi', cv.VideoWriter_fourcc('M','J','P','G'), 30, (frame_width, frame_height))
+out = cv.VideoWriter('model_green_3D_new.avi', cv.VideoWriter_fourcc('M','J','P','G'), 5, (frame_width, frame_height))
 def mean_green():    
     green_data = 29
     datapoints_green = []
@@ -74,17 +74,17 @@ def look_at_histogram():
                 std_dev_r.append(stds[2])
 
     #sum across the columns, divide by total number of observations
-    histogram_avg_b = np.sum(histogram_b, axis=1) / (yellow_data)
-    histogram_avg_g = np.sum(histogram_g, axis=1) / (yellow_data)
-    histogram_avg_r = np.sum(histogram_r, axis=1) / (yellow_data) 
+    histogram_avg_b = np.sum(histogram_b, axis=1) / (green_data)
+    histogram_avg_g = np.sum(histogram_g, axis=1) / (green_data)
+    histogram_avg_r = np.sum(histogram_r, axis=1) / (green_data) 
 
     # Uncomment to plot histograms
     plt.subplot(3,1,1)
-    plt.plot(histogram_avg_b, color = "b")
+    plt.plot(histogram_b, color = "b")
     plt.subplot(3,1,2)
-    plt.plot(histogram_avg_g, color = "g")
+    plt.plot(histogram_g, color = "g")
     plt.subplot(3,1,3)
-    plt.plot(histogram_avg_r, color = "r")
+    plt.plot(histogram_r, color = "r")
     plt.show()
 
 def learn_with_em(xtrain, K, iters):
@@ -105,7 +105,7 @@ def learn_with_em(xtrain, K, iters):
     # print(covar)
     while len(log_likelihoods_array) < iters:
         # Expectation Step
-        print(len(log_likelihoods_array))
+        # print(len(log_likelihoods_array))
         for k in range(K):
             tmp = pi_k[k] * mvn.pdf(xtrain, mean[k], covar[k], allow_singular=True)
             prob_cluster__given_x[:,k]=tmp.reshape((n_points,))
@@ -121,7 +121,7 @@ def learn_with_em(xtrain, K, iters):
         
         # Maximization Step
         for k in range(K):
-            temp = math.fsum(prob_cluster__given_x[:,k])
+            # temp = math.fsum(prob_cluster__given_x[:,k])
             mean[k] = 1. / N_ks[k] * np.sum(prob_cluster__given_x[:, k] * xtrain.T, axis = 1).T
             diff_x_mean = xtrain - mean[k]
             covar[k] = np.array(1 / N_ks[k] * np.dot(np.multiply(diff_x_mean.T,  prob_cluster__given_x[:, k]), diff_x_mean))
@@ -140,6 +140,8 @@ def green_buoy_visual(trained_mean, trained_covar, train_pi_k, K):
     print("Frame Reading started..")
     while (vid.isOpened()):
         ret,frame = vid.read()
+        fps = vid.get(cv.CAP_PROP_FPS)
+        # print(fps)
         if frame is not None:
             frame_orig = frame
             if ret == True:            
@@ -150,11 +152,12 @@ def green_buoy_visual(trained_mean, trained_covar, train_pi_k, K):
 
                 for k in range(0, K):
                     # Look at probabilities from here.
-                    prob_of_green_buoy[:, k] = train_pi_k[k] * mvn.pdf(frame, trained_mean[k], trained_covar[k])
+                    prob_of_green_buoy[:, k] = train_pi_k[k] * mvn.pdf(frame, trained_mean[k], trained_covar[k], allow_singular=True)
                     green_likelihood = prob_of_green_buoy.sum(1)
 
                 green_prob = np.reshape(green_likelihood, (height, width))
-                green_prob[np.where(green_prob == np.max(green_prob))] = 255
+                # green_prob[np.where(green_prob == np.max(green_prob))] = 255
+                green_prob[green_prob > np.max(green_prob)/2.0] = 255
                 mask_image =np.zeros((height, width, channels), np.uint8)
                 mask_image[:,:,0] = green_prob
                 mask_image[:,:,1] = green_prob
@@ -186,11 +189,12 @@ def green_buoy_visual(trained_mean, trained_covar, train_pi_k, K):
                 (contour_sorted, bounds) = contours.sort_contours(contours_image)
                 hull = cv.convexHull(contour_sorted[0])
                 (x, y), radius = cv.minEnclosingCircle(hull)
-                print(radius, x, y)
-                if radius > 2.6 and ((x > 320 and y > 280) or (x > 350 and y > 200)):
-                    cv.circle(frame_orig, (int(x), int(y) - 10), int(radius + 10), (75,255,25), 4)
+                # print(radius, x, y)
+                if radius > 9 and ((x > 320 and y > 300) or (x > 350 and y > 200)):
+                    cv.circle(frame_orig, (int(x), int(y)), int(radius + 2), (75,255,25), 4)
                 cv.imshow("Final", frame_orig)
                 out.write(frame_orig)
+
                 k = cv.waitKey(15) & 0xff
                 if k == 27:
                     break
@@ -205,7 +209,7 @@ def green_buoy_visual(trained_mean, trained_covar, train_pi_k, K):
 # # Uncomment this
 K = 5
 # mean_green_pts = mean_green()
-# trained_mean, trained_covar, train_pi_k = learn_with_em(np.array(mean_green_pts), 5, 500)
+# trained_mean, trained_covar, train_pi_k = learn_with_em(np.array(mean_green_pts), K, 1500)
 # np.save('mean_green.npy', trained_mean)
 # np.save('covar_green.npy', trained_covar)
 # np.save('weights_green.npy', train_pi_k)

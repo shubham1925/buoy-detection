@@ -23,7 +23,7 @@ path_yellow = '/home/prasheel/Workspace/ENPM673/Project3/buoy-detection/Training
 vid = cv.VideoCapture("detectbuoy.avi")
 frame_width = int(vid.get(3))
 frame_height = int(vid.get(4))
-out = cv.VideoWriter('model_yellow_3D.avi', cv.VideoWriter_fourcc('M','J','P','G'), 30, (frame_width, frame_height))
+out = cv.VideoWriter('model_yellow_3D_new.avi', cv.VideoWriter_fourcc('M','J','P','G'), 5, (frame_width, frame_height))
 def mean_yellow():    
     yellow_data = 140
     datapoints_yellow = []
@@ -80,11 +80,11 @@ def look_at_histogram():
 
     # Uncomment to plot histograms
     plt.subplot(3,1,1)
-    plt.plot(histogram_avg_b, color = "b")
+    plt.plot(histogram_b, color = "b")
     plt.subplot(3,1,2)
-    plt.plot(histogram_avg_g, color = "g")
+    plt.plot(histogram_g, color = "g")
     plt.subplot(3,1,3)
-    plt.plot(histogram_avg_r, color = "r")
+    plt.plot(histogram_r, color = "r")
     plt.show()
 
 def learn_with_em(xtrain, K, iters):
@@ -121,7 +121,7 @@ def learn_with_em(xtrain, K, iters):
         
         # Maximization Step
         for k in range(K):
-            temp = math.fsum(prob_cluster__given_x[:,k])
+            # temp = math.fsum(prob_cluster__given_x[:,k])
             mean[k] = 1. / N_ks[k] * np.sum(prob_cluster__given_x[:, k] * xtrain.T, axis = 1).T
             diff_x_mean = xtrain - mean[k]
             covar[k] = np.array(1 / N_ks[k] * np.dot(np.multiply(diff_x_mean.T,  prob_cluster__given_x[:, k]), diff_x_mean))
@@ -154,7 +154,9 @@ def yellow_buoy_visual(trained_mean, trained_covar, train_pi_k, K):
                     yellow_likelihood = prob_of_yellow_buoy.sum(1)
 
                 yellow_prob = np.reshape(yellow_likelihood, (height, width))
-                yellow_prob[np.where(yellow_prob == np.max(yellow_prob))] = 255
+                # yellow_prob[np.where(yellow_prob == np.max(yellow_prob))] = 255
+                yellow_prob[yellow_prob > np.max(yellow_prob)/5.0] = 255
+                
                 mask_image =np.zeros((height, width, channels), np.uint8)
                 mask_image[:,:,0] = yellow_prob
                 mask_image[:,:,1] = yellow_prob
@@ -187,8 +189,8 @@ def yellow_buoy_visual(trained_mean, trained_covar, train_pi_k, K):
                 hull = cv.convexHull(contour_sorted[0])
                 (x, y), radius = cv.minEnclosingCircle(hull)
                 print(radius, x, y)
-                if radius > 2.6: # and ((x > 320 and y > 280) or (x > 350 and y > 200)):
-                    cv.circle(frame_orig, (int(x), int(y)), int(radius + 10), (42,243,255), 4)
+                if radius > 3: # and ((x > 320 and y > 280) or (x > 350 and y > 200)):
+                    cv.circle(frame_orig, (int(x), int(y) + 4), int(radius + 4), (42,243,255), 4)
                 cv.imshow("Final", frame_orig)
                 out.write(frame_orig)
                 k = cv.waitKey(15) & 0xff
@@ -203,9 +205,9 @@ def yellow_buoy_visual(trained_mean, trained_covar, train_pi_k, K):
 # look_at_histogram()
 
 # # Uncomment this
-K = 4
+K = 7
 # mean_yellow_pts = mean_yellow()
-# trained_mean, trained_covar, train_pi_k = learn_with_em(np.array(mean_yellow_pts), 5, 500)
+# trained_mean, trained_covar, train_pi_k = learn_with_em(np.array(mean_yellow_pts), K, 1500)
 # np.save('mean_yellow.npy', trained_mean)
 # np.save('covar_yellow.npy', trained_covar)
 # np.save('weights_yellow.npy', train_pi_k)
