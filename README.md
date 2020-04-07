@@ -28,11 +28,11 @@ Enter the choice of code (histogram, training or detection of buoys) when prompt
 
 To run the code for 1D detection of yellow buoy
 ```
-python3.7 Yellow_detection.py
+python3.7 Yellow_Detection.py
 ```
 To run the code for 1D detection of green buoy
 ```
-python3.7 Green_detection.py
+python3.7 Green_Detection.py
 ```
 To run the code for 1D detection of orange buoy
 ```
