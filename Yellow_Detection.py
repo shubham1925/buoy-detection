@@ -227,7 +227,7 @@ if __name__ == "__main__":
             ret_thresh, thresholded = cv.threshold(blur, 50, 255, cv.THRESH_BINARY)
             edges = cv.Canny(thresholded, 200, 300)
             dilated = cv.dilate(thresholded, kernel_ellipse, iterations = 1)
-            _,contours, _ = cv.findContours(thresholded, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
+            contours, _ = cv.findContours(thresholded, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
             #cont_img = cv.drawContours(frame, contours, -1, (0,0,255), 5)
 
             # Draw circle to fit the contours enclosing specified area
