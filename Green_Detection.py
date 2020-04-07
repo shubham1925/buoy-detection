@@ -228,7 +228,7 @@ if __name__ == "__main__":
             edges = cv.Canny(thresholded, 200, 300)
             dilated = cv.dilate(thresholded, kernel_ellipse, iterations = 1)
             _,contours, _ = cv.findContours(dilated, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
-            cont_img = cv.drawContours(frame, contours, -1, (0,0,255), 5)
+            #cont_img = cv.drawContours(frame, contours, -1, (0,0,255), 5)
 
             # Draw circle to fit the contours enclosing specified area
             for c in contours:
@@ -238,7 +238,7 @@ if __name__ == "__main__":
                     center = (int(x),int(y))
                     r = int(r)
                     print(r)
-                    if r > 8 and r < 17 and y<350 and y>150 :
+                    if r > 8 and r < 15 and y<350 and y>150 :
                         print("inside")
                         cv.circle(frame,center,r,(0,255,0),2)
             cv.imshow("threshold", frame)
