@@ -14,15 +14,15 @@ except:
 hist_size = [255]
 hist_range = [0,256]
 dataset = []
-path = r'C:\Users\rajsh\Desktop\GMM\Training Set\Green'
+path = r'C:\Users\rajsh\Desktop\GMM\Training Set\Green2'
 
 vid = cv.VideoCapture("detectbuoy.avi")
 for i in os.listdir(path):
     dataset.append(i)
 
-green_data = 28
-orange_data = 111
-yellow = 140
+green_data = 29
+orange_data = 118
+yellow = 138
 
 def GaussianEquation(sigma, x, mean):
     equation = (1/(sigma*math.sqrt(2*math.pi)))*np.exp(-0.5*(x-mean)**2/sigma**2)
@@ -51,7 +51,7 @@ def AverageHistogram():
         coordinates = np.indices((img.shape[0], img.shape[0]))
         coordinates = coordinates.reshape(2, -1)
         x , y=coordinates[0] , coordinates[1]
-        indices=np.where((x-img.shape[0]/2)**2+(y-img.shape[0]/2)**2 < (img.shape[0]/2)**2)
+        indices=np.where(img[x,y]!=[0,0,0])
         xnew,ynew=x[indices[0]],y[indices[0]]
         mask[xnew,ynew]=img[xnew,ynew]
         #cv.imshow("e",mask)
@@ -97,6 +97,7 @@ def EM():
     datapoint_b = []
     datapoint_g = []
     datapoint_r = []
+    a=[]
     
     for i in range(0, green_data):
         string_path = path+"\green"+str(i)+".jpg"
@@ -106,14 +107,15 @@ def EM():
         red_chan_img = img[:,:,2]
         for i in range(0, img.shape[0]):
             for j in range(0, img.shape[0]):
-                if (i-img.shape[0]/2)**2+(j-img.shape[0]/2)**2 < (img.shape[0]/2)**2:
+                a=img[i,j]
+                if a[0]!=0 and a[1]!=0 and a[2]!=0:
                     datapoint_b.append(blue_chan_img[i,j])
                     datapoint_g.append(green_chan_img[i,j])
                     datapoint_r.append(red_chan_img[i,j])
   
     #intital estimates
     mean_b_init = 120
-    mean_g_init = 240
+    mean_g_init = 230
     mean_r_init = 125
     std_dev_b_init = 40
     std_dev_g_init = 40
@@ -121,7 +123,7 @@ def EM():
     
     iterations = 0
     
-    while(iterations <=70):        
+    while(iterations <=50):        
         responsibility_1 = []
         responsibility_2 = []
         responsibility_3 = []
@@ -195,7 +197,7 @@ if __name__ == "__main__":
     greenboi_g = GaussianEquation(std_dev_g_init, list(range(0,256)), mean_g_init)
     greenboi_b = GaussianEquation(std_dev_b_init, list(range(0,256)), mean_b_init)
     plt.plot(greenboi_r, "r", greenboi_g, "g", greenboi_b, "b")
-    #plt.show()
+    plt.show()
     
     while True:
       ret,frame = vid.read()
@@ -211,8 +213,7 @@ if __name__ == "__main__":
             pixel_valr=frame_r[x,y]
             pixel_valg=frame_g[x,y]
             pixel_valb=frame_b[x,y]
-            indices1=np.where((greenboi_g[pixel_valg]>0.04))
-            #indices1=np.where((greenboi_r[pixel_valr]>0.001) & (greenboi_g[pixel_valg]>0.005) & (greenboi_b[pixel_valb]>0.004) )
+            indices1=np.where((greenboi_g[pixel_valg]>0.01) & (greenboi_b[pixel_valb]>0.001) & (greenboi_r[pixel_valr]>0.001))
             x1,y1=x[indices1[0]],y[indices1[0]]
             frame_updated[x1,y1]=255
             
@@ -223,11 +224,12 @@ if __name__ == "__main__":
                    [1, 1, 1, 1, 1],
                    [1, 1, 1, 1, 1],
                    [0, 0, 1, 0, 0]], dtype=np.uint8)
-            blur = cv.blur(frame_updated,(10,10)) 
+            blur = cv.blur(frame_updated,(10,10))
             ret_thresh, thresholded = cv.threshold(blur, 50, 255, cv.THRESH_BINARY)
             edges = cv.Canny(thresholded, 200, 300)
             dilated = cv.dilate(thresholded, kernel_ellipse, iterations = 1)
-            contours, _ = cv.findContours(dilated, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
+            cv.imshow("threshold1", dilated)
+            _,contours, _ = cv.findContours(dilated, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
             #cont_img = cv.drawContours(frame, contours, -1, (0,0,255), 5)
 
             # Draw circle to fit the contours enclosing specified area
@@ -238,7 +240,7 @@ if __name__ == "__main__":
                     center = (int(x),int(y))
                     r = int(r)
                     print(r)
-                    if r > 8 and r < 15 and y<350 and y>150 :
+                    if r > 2 and r < 37 and y<400 and y>150:
                         print("inside")
                         cv.circle(frame,center,r,(0,255,0),2)
             cv.imshow("threshold", frame)
